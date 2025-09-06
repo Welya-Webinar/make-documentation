@@ -1,162 +1,155 @@
-# Controller: MakeController
-Base Route: /make
+# MakeController
 
-Handles API requests related to webinars, authorization, and attendees.
+The controller defines the API routes under the /make prefix.
 
-## 1. Authorize API Key
-
-Endpoint:
-GET /make/authorize
-
-Headers:
-
-x-api-key (string, required) – The API key associated with a workspace.
+## GET /make/authorize
 
 Description:
 Validates an API key and returns the associated admin user’s email.
 
-Response Example:
+Headers:
 
-{
-  "status": 200,
-  "message": "Clé API valide",
-  "email": "admin@example.com"
-}
+x-api-key (string, required) – Workspace API key.
 
+Responses:
 
-Errors:
+200 OK: Returns a success message and admin email.
 
-401 Unauthorized – Invalid or missing API key.
+401 Unauthorized: If the API key is missing or invalid.
 
-## 2. Get Webinar List
-
-Endpoint:
-GET /make/webinar/list?apiKey=YOUR_API_KEY
-
-Query Parameters:
-
-apiKey (string, required) – The API key linked to the workspace.
+## GET /make/webinar/list
 
 Description:
-Fetches all webinars and their active sessions (LIVE or PENDING) for the given workspace. Dates are formatted in French locale.
-
-Response Example:
-
-{
-  "result": [
-    {
-      "sessionId": "sess_123",
-      "title": "Webinar Title",
-      "scheduledFor": "15 juillet 20h55"
-    },
-    {
-      "sessionId": "sess_456",
-      "title": "Webinar Title",
-      "scheduledFor": "16 juillet 18h00 evergreen"
-    }
-  ]
-}
-
-
-Errors:
-
-404 Not Found – Workspace not found.
-
-## 3. Register User in Webinar
-
-Endpoint:
-GET /make/register/webinar?session_id=...&email=...&name=...
+Fetches a list of upcoming webinars (standard and evergreen) for a workspace using its API key.
 
 Query Parameters:
 
-session_id (string, required) – The webinar or evergreen session ID.
+apiKey (string, required) – Workspace API key.
 
-email (string, required) – The attendee’s email.
+Responses:
 
-name (string, required) – The attendee’s full name.
+200 OK: Returns an array of active sessions with:
+
+sessionId
+
+title
+
+scheduledFor (formatted in French locale, e.g., 15 juillet 20h55)
+
+404 Not Found: If no workspace is found.
+
+401 Unauthorized: If API key is missing.
+
+## GET /make/register/webinar
 
 Description:
-Registers a user in a webinar or evergreen session. If the user is already registered, it returns the existing session. Generates links for live and replay.
-
-Response Example:
-
-{
-  "email": "user@example.com",
-  "name": "John Doe",
-  "webinar_name": "Sales Masterclass",
-  "link_live": "https://app.welya.io/live/attendee123",
-  "link_replay": "https://app.welya.io/replay/attendee123",
-  "day_live": "15 juillet 2025",
-  "time_live": "20:55"
-}
-
-
-Errors:
-
-404 Not Found – Session not found.
-
-500 Internal Server Error – Registration error.
-
-## 4. Mark Attendee as Buyer in Live Session
-
-Endpoint:
-GET /make/live/buyer?name=...&email=...
+Registers a user for a specific webinar session (standard or evergreen).
 
 Query Parameters:
 
-name (string, required) – Attendee’s name (used for updating the record).
+session_id (string, required) – The webinar session ID.
+
+email (string, required) – User’s email address.
+
+name (string, required) – User’s full name.
+
+Responses:
+
+200 OK: Returns registration details including:
+
+email, name, webinar_name
+
+link_live (user-specific live session URL)
+
+link_replay (replay link)
+
+day_live and time_live (formatted in French locale).
+
+400 Bad Request: If parameters are missing or email is invalid.
+
+404 Not Found: If no session is found.
+
+## GET /make/live/buyer
+
+Description:
+Marks a registered attendee as a buyer in an ongoing live webinar session and notifies the messaging service.
+
+Query Parameters:
+
+name (string, required) – Attendee’s name.
 
 email (string, required) – Attendee’s email.
 
-Description:
-Marks an attendee as a buyer during a live session (standard or evergreen). Sends a real-time event message via the messaging service.
+Responses:
 
-Response Example:
+200 OK: Returns the updated attendee’s name and email.
 
-{
-  "name": "John Doe",
-  "email": "user@example.com"
-}
+400 Bad Request: If parameters are missing or email is invalid.
 
+404 Not Found: If no active session or attendee is found.
 
-Errors:
+# MakeService
 
-404 Not Found – Session or attendee not found.
+The service layer implements the business logic and interacts with the database using Prisma.
 
-# Service: MakeService
+## authorizeUserApiKey(apiKey: string)
 
-Provides the business logic for handling authorization, webinars, and attendees.
+Validates the API key against the workspace table.
 
-## 1. authorizeUserApiKey(apiKey: string)
+Ensures at least one admin user exists in the workspace.
 
-Validates the given API key.
+Returns the admin’s email if valid.
 
-Fetches the workspace and its admin user.
+Throws:
 
-Throws UnauthorizedException if the key is invalid.
+UnauthorizedException if key is missing or invalid.
 
-## 2. getWebinarListFromApiKey(apiKey: string)
+## getWebinarListFromApiKey(apiKey: string)
 
-Finds the workspace linked to the API key.
+Finds webinars linked to a workspace via its API key.
 
-Retrieves webinars and active sessions (LIVE, PENDING).
+Fetches LIVE or PENDING sessions for both standard and evergreen webinars.
 
-Formats session dates using Luxon in French locale.
+Formats scheduledFor dates in French locale.
 
-## 3. registerUserInWebinar(sessionId, email, name)
+Throws:
 
-Looks for a standard or evergreen session.
+UnauthorizedException if key is missing.
 
-If the attendee already exists, returns their session.
+NotFoundException if workspace does not exist.
 
-Otherwise, creates a new attendee and generates live/replay links.
+## registerUserInWebinar(sessionId: string, email: string, name: string)
 
-Formats the date and time of the session in French.
+Validates input parameters and email format.
 
-## 4. getLiveBuyer(name, email)
+Checks if session exists (standard or evergreen).
 
-Finds an active (LIVE) session (standard or evergreen) where the attendee is registered.
+Prevents duplicate registrations by checking existing attendees.
 
-Updates the attendee as a buyer.
+Creates a new webinarAttendee entry if not already registered.
 
-Emits a user-buyer event via the messaging service with details (attendee info, conversion message, timestamp, evergreen flag).
+Returns session links and formatted date/time.
+
+Throws:
+
+Error if parameters are missing or email invalid.
+
+NotFoundException if no matching session is found.
+
+## getLiveBuyer(name: string, email: string)
+
+Validates input parameters and email format.
+
+Checks if the attendee is part of an ongoing LIVE session (standard or evergreen).
+
+Updates the attendee record with isBuyer: true.
+
+Sends a user-buyer event through the MessagingService.
+
+Returns attendee information.
+
+Throws:
+
+Error if parameters are missing or email invalid.
+
+NotFoundException if no active session or attendee is found.
