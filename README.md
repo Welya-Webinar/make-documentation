@@ -1,9 +1,9 @@
-Controller: MakeController
+# Controller: MakeController
 Base Route: /make
 
 Handles API requests related to webinars, authorization, and attendees.
 
-1. Authorize API Key
+## 1. Authorize API Key
 
 Endpoint:
 GET /make/authorize
@@ -28,7 +28,7 @@ Errors:
 
 401 Unauthorized – Invalid or missing API key.
 
-2. Get Webinar List
+## 2. Get Webinar List
 
 Endpoint:
 GET /make/webinar/list?apiKey=YOUR_API_KEY
@@ -62,7 +62,7 @@ Errors:
 
 404 Not Found – Workspace not found.
 
-3. Register User in Webinar
+## 3. Register User in Webinar
 
 Endpoint:
 GET /make/register/webinar?session_id=...&email=...&name=...
@@ -97,7 +97,7 @@ Errors:
 
 500 Internal Server Error – Registration error.
 
-4. Mark Attendee as Buyer in Live Session
+## 4. Mark Attendee as Buyer in Live Session
 
 Endpoint:
 GET /make/live/buyer?name=...&email=...
@@ -123,11 +123,11 @@ Errors:
 
 404 Not Found – Session or attendee not found.
 
-Service: MakeService
+# Service: MakeService
 
 Provides the business logic for handling authorization, webinars, and attendees.
 
-1. authorizeUserApiKey(apiKey: string)
+## 1. authorizeUserApiKey(apiKey: string)
 
 Validates the given API key.
 
@@ -135,7 +135,7 @@ Fetches the workspace and its admin user.
 
 Throws UnauthorizedException if the key is invalid.
 
-2. getWebinarListFromApiKey(apiKey: string)
+## 2. getWebinarListFromApiKey(apiKey: string)
 
 Finds the workspace linked to the API key.
 
@@ -143,7 +143,7 @@ Retrieves webinars and active sessions (LIVE, PENDING).
 
 Formats session dates using Luxon in French locale.
 
-3. registerUserInWebinar(sessionId, email, name)
+## 3. registerUserInWebinar(sessionId, email, name)
 
 Looks for a standard or evergreen session.
 
@@ -153,7 +153,7 @@ Otherwise, creates a new attendee and generates live/replay links.
 
 Formats the date and time of the session in French.
 
-4. getLiveBuyer(name, email)
+## 4. getLiveBuyer(name, email)
 
 Finds an active (LIVE) session (standard or evergreen) where the attendee is registered.
 
